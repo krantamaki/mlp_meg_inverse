@@ -39,7 +39,7 @@ neurons = initialize_network()
 
 def B_t(coordinates):
     """
-    Calculate the magnetic field at given coordinates at time point t
+    Calculate the magnetic field at given coordinates over the time interval
     Implementation is naive one using Biot-Savart law and assuming that the current
     is found at the point of the neuron
     :param coordinates: Coordinates of wanted point
@@ -65,7 +65,6 @@ def squid_measurement(i):
     """
     Simulate what the SQUID-sensor would measure. In this naive implementation it's just a sum of the magnetic fields
     at generated points. The plane on which the sensor is located is parallel to xy-plane and located at height z.
-    Thus the center point of the sensor is (0, 0, z).
     :param i: The index of the center point
     :return: Measured magnetic field strength as a function of time
     """
@@ -100,8 +99,8 @@ def squid_measurement(i):
 
 def corr(x0):
     """
-    Calculate the correlation between "real" signal and the one caused by neurons in neural net
-    "Real" signal and neurons can be accessed from config file. Coordinates of neuron i are found at x0[3 * i:3 * (i + 1)]
+    Calculate the correlation between "real" signals and the one caused by neurons in neural net
+    Coordinates of neuron i are found at x0[3 * i:3 * (i + 1)]
     :param x0: ndarray of shape (n,) of coordinates
     :return: Correlation value
     """
