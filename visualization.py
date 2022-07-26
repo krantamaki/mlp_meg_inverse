@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-from config import surface_func, real, clean_signal, x
+from config import surface_func, reals, clean_signal, x
 
 
 def plot_current(neuron):
@@ -13,10 +13,11 @@ def plot_current(neuron):
     plt.show()
 
 
-def plot_signal(simulated, plot_real=True, plot_clean=True, title=None):
+def plot_signal(simulated, real, plot_real=True, plot_clean=True, title=None):
     """
     TODO: Description
     :param simulated:
+    :param real:
     :param plot_real:
     :param plot_clean:
     :param title:

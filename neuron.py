@@ -96,7 +96,7 @@ class Neuron:
             t_0 = self.prev_layer[i].calc_t_end()
             dist = self.distance_to_i(i)
             duration = (dist / v) * 1000
-            print("Duration ", duration)
+            # print("Duration ", duration)
             start_filler = [0 for i in range(int(accuracy * ((t_0 - signal_t_start) / 1000)))]
             end_filler = [0 for i in range(int(accuracy * ((signal_t_end - (t_0 + duration)) / 1000)))]
 
@@ -105,7 +105,7 @@ class Neuron:
             else:
                 I_0 = self.prev_layer[i].calc_activation() * I_max
 
-            print("I_0 ", I_0)
+            # print("I_0 ", I_0)
 
             l = dist * length_coef
 
@@ -117,7 +117,7 @@ class Neuron:
             # Check that the length is correct. This might vary by a few do to type conversions
             required_length = len(x)
             current_length = len(I_final)
-            print(required_length, current_length)
+            # print(required_length, current_length)
             if current_length > required_length:
                 # Remove values from the end to make lengths match
                 I_final = I_final[:required_length]

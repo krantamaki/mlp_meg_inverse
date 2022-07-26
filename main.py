@@ -4,7 +4,7 @@ from scipy.constants import mu_0
 import itertools
 import random
 
-from config import surface_func, margin_of_error, accuracy, num_points, real, z, r, locations, network_struct, x
+from config import surface_func, margin_of_error, num_points, reals, z, r, locations, network_struct, center_points, layers
 from visualization import visualize, plot_signal, plot_current
 from neuron import Neuron
 
@@ -37,50 +37,45 @@ def initialize_network():
 neurons = initialize_network()
 
 
-def B_t(coordinates, t):
+def B_t(coordinates):
     """
     Calculate the magnetic field at given coordinates at time point t
     Implementation is naive one using Biot-Savart law and assuming that the current
     is found at the point of the neuron
     :param coordinates: Coordinates of wanted point
-    :param t: Time point (milliseconds)
-    :return: Value corresponding to the magnetic field strength at given point (and time)
+    :return: ndarray corresponding the magnetic field strength at given point over time
     """
-    # Find all the neurons that are active at given time
-    active_neurons = [neuron for neuron in neurons if neuron.t_start <= t <= neuron.calc_t_end()]
-    # Find the neurons which magnetic fields correspond with the given point (with some margin of error)
-    B_i = [0]
-    for neuron in active_neurons:
+    magnetic_fields = []
+    for neuron in neurons:
         if neuron.prev_layer is not None:
             point = neuron.coordinates
-            r = np.sqrt(sum([(point[j] - coordinates[j]) ** 2 for j in range(3)]))
+            r_0 = np.sqrt(sum([(point[j] - coordinates[j]) ** 2 for j in range(3)]))
             normal_vect = np.array(neuron.orientation())
             # Calculate the angle theta between the neuron orientation and vector from neuron point to the given point
             # and if |pi/2 - |theta|| < margin of error magnetic field is included
             direct_vect = np.array([coordinates[i] - point[i] for i in range(3)])
-            theta = np.abs(np.arccos(np.dot(normal_vect, direct_vect) / r))
+            theta = np.abs(np.arccos(np.dot(normal_vect, direct_vect) / r_0))
             if np.abs(np.pi / 2 - theta) < margin_of_error or np.abs(3 * np.pi / 2 - theta) < margin_of_error:
-                current = neuron.I_tot()
-                B_i.append((mu_0 * current[int(accuracy * ((t - neuron.t_start) / 1000))]) / (2 * np.pi * r))
+                magnetic_fields.append(mu_0 * neuron.I_tot() / (2 * np.pi * r))
 
-    return sum(B_i)
+    return np.sum(magnetic_fields, axis=0)
 
 
-def squid_measurement(t):
+def squid_measurement(i):
     """
     Simulate what the SQUID-sensor would measure. In this naive implementation it's just a sum of the magnetic fields
     at generated points. The plane on which the sensor is located is parallel to xy-plane and located at height z.
     Thus the center point of the sensor is (0, 0, z).
-    :param t: Wanted time point
-    :return: Measured magnetic field strength
+    :param i: The index of the center point
+    :return: Measured magnetic field strength as a function of time
     """
     def circle_points(R, N):
         # From https://stackoverflow.com/questions/33510979/generator-of-evenly-spaced-points-in-a-circle-in-python
         points = []
         for r_i, n_i in zip(R, N):
             theta = np.linspace(0, 2 * np.pi, n_i, endpoint=False)
-            x = r_i * np.cos(theta)
-            y = r_i * np.sin(theta)
+            x = r_i * np.cos(theta) + center_points[i][0]
+            y = r_i * np.sin(theta) + center_points[i][1]
             for x_i, y_i in zip(x, y):
                 points.append((x_i, y_i, z))
         return points
@@ -98,9 +93,7 @@ def squid_measurement(t):
 
     B_i = []
     for point in all_points:
-        B_i.append(B_t(point, t))
-
-    print("Time point ", t)
+        B_i.append(B_t(point))
 
     return sum(B_i)
 
@@ -112,18 +105,23 @@ def corr(x0):
     :param x0: ndarray of shape (n,) of coordinates
     :return: Correlation value
     """
-    n = len(real)
+    n = len(reals[0])
     for i, neuron in enumerate(neurons):
         # Update neuron coordinates
         neuron.coordinates = x0[i * 3:(i + 1) * 3]
-    simulated = np.array([squid_measurement(t) for t in range(int((n / accuracy) * 1000))])
-    numerator = n * np.dot(real, simulated) - np.sum(real) * np.sum(simulated)
-    denominator = np.sqrt(n * np.sum(np.square(real)) - np.sum(real) ** 2) * np.sqrt(n * np.sum(np.square(simulated)) - np.sum(simulated) ** 2)
+    rhos = []
+    for i in range(len(center_points)):
+        simulated = squid_measurement(i)
+        numerator = n * np.dot(reals[i], simulated) - np.sum(reals[i]) * np.sum(simulated)
+        denominator = np.sqrt(n * np.sum(np.square(reals[i])) - np.sum(reals[i]) ** 2) * np.sqrt(n * np.sum(np.square(simulated)) - np.sum(simulated) ** 2)
+        rho_i = numerator / denominator
+        if isinstance(rho_i, np.ndarray):
+            rho_i = 0
+        rhos.append(rho_i)
 
-    rho = numerator / denominator
+    rho = sum(rhos) / len(rhos)
 
-    # print("Current correlation is ", rho)
-
+    print("Average correlation ", rho)
     # Return the negation of the correlation so that minimizing it becomes maximizing the non-negated correlation
     return -rho
 
@@ -140,6 +138,8 @@ def total_distance_to_surf(x0):
         surface_point = [point[0], point[1], surface_func(point[0], point[1])]
         total_dist += np.sqrt(sum([(point[i] - surface_point[i]) ** 2 for i in range(3)]))
 
+    print("Total distance from surface ", total_dist)
+
     return total_dist
 
 
@@ -153,29 +153,27 @@ def optimize():
     cons = {'type': 'eq', 'fun': total_distance_to_surf}
     x0 = np.array(list(itertools.chain(*[neuron.coordinates for neuron in neurons])))
     x0 = x0.reshape(len(x0),)
-    sol = opt.minimize(corr, x0, method='SLSQP', constraints=cons)
+    sol = opt.minimize(corr, x0, method='SLSQP', constraints=cons, options={'ftol': 0.00001, 'maxiter': 25})
 
     return sol
 
 
 def main():
-    plot_current(neurons[7])
-    """
-    visualize(neurons, title="Initial")
-    # x0 = list(itertools.chain(*[neuron.coordinates for neuron in neurons]))
-    # rho = -corr(np.array(x0).reshape(len(x0),))
-    simulated = np.array([squid_measurement(t) for t in range(int((len(x) / accuracy) * 1000))])
-    plot_signal(simulated, title="Test", plot_real=True, plot_clean=True)
-    """
-    """
+    x0 = list(itertools.chain(*[neuron.coordinates for neuron in neurons]))
+    rho = -corr(np.array(x0).reshape(len(x0),))
+    visualize(neurons, title=f"Initial corr {rho}", interval=(min(x0), max(x0)))
     print("Initial correlation ", rho)
+    for i in range(len(center_points)):
+        simulated = squid_measurement(i)
+        plot_signal(simulated, reals[i], title=f"{i}_Initial_{layers}x{network_struct[0]} corr {rho}",
+                    plot_real=True, plot_clean=True)
     sol = optimize()
     print(sol)
-    simulated = np.array([squid_measurement(t) for t in range(int((len(x) / accuracy) * 1000))])
-    plot_signal(simulated, title=f"Optimized corr {-sol.fun}", plot_real=False, plot_clean=False)
-    visualize(neurons, title="Optimized")
-    """
-    # plot_current(neurons[4])
+    for i in range(len(center_points)):
+        simulated = squid_measurement(i)
+        plot_signal(simulated, reals[i], title=f"{i}_Optimized_{layers}x{network_struct[0]} corr {-sol.fun}",
+                    plot_real=True, plot_clean=True)
+    visualize(neurons, title=f"Optimized corr {-sol.fun}", interval=(min(sol.x), max(sol.x)))
 
 
 main()
