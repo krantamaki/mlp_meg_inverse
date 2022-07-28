@@ -166,6 +166,7 @@ def main():
                     plot_real=False, plot_clean=False)
     """
     start_time = timeit.default_timer()
+    print("Started: ", start_time)
     x0 = list(itertools.chain(*[neuron.coordinates for neuron in neurons]))
     rho = -corr(np.array(x0).reshape(len(x0),))
     visualize(neurons, title=f"Initial_connections_{layers}x{network_struct[0]} corr {rho}", interval=(min(x0), max(x0)))
