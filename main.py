@@ -3,6 +3,7 @@ import scipy.optimize as opt
 from scipy.constants import mu_0
 import itertools
 import random
+import timeit
 
 from config import surface_func, margin_of_error, num_points, reals, z, r, locations, network_struct, center_points, layers
 from visualization import visualize, plot_signal, plot_current
@@ -152,15 +153,22 @@ def optimize():
     cons = {'type': 'eq', 'fun': total_distance_to_surf}
     x0 = np.array(list(itertools.chain(*[neuron.coordinates for neuron in neurons])))
     x0 = x0.reshape(len(x0),)
-    sol = opt.minimize(corr, x0, method='SLSQP', constraints=cons, options={'ftol': 0.00001, 'maxiter': 25})
+    sol = opt.minimize(corr, x0, method='SLSQP', constraints=cons, options={'ftol': 0.00001, 'maxiter': 50})
 
     return sol
 
 
 def main():
+    """
+    for i in range(len(center_points)):
+        simulated = squid_measurement(i)
+        plot_signal(simulated, reals[i], title=f"{i}_squashed_{layers}x{network_struct[0]}",
+                    plot_real=False, plot_clean=False)
+    """
+    start_time = timeit.default_timer()
     x0 = list(itertools.chain(*[neuron.coordinates for neuron in neurons]))
     rho = -corr(np.array(x0).reshape(len(x0),))
-    visualize(neurons, title=f"Initial corr {rho}", interval=(min(x0), max(x0)))
+    visualize(neurons, title=f"Initial_connections_{layers}x{network_struct[0]} corr {rho}", interval=(min(x0), max(x0)))
     print("Initial correlation ", rho)
     for i in range(len(center_points)):
         simulated = squid_measurement(i)
@@ -172,7 +180,8 @@ def main():
         simulated = squid_measurement(i)
         plot_signal(simulated, reals[i], title=f"{i}_Optimized_{layers}x{network_struct[0]} corr {-sol.fun}",
                     plot_real=True, plot_clean=True)
-    visualize(neurons, title=f"Optimized corr {-sol.fun}", interval=(min(sol.x), max(sol.x)))
+    visualize(neurons, title=f"Optimized_connections_{layers}x{network_struct[0]} corr {-sol.fun}", interval=(min(sol.x), max(sol.x)))
+    print("Total runtime: ", timeit.default_timer() - start_time)
 
 
 main()

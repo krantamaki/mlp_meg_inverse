@@ -24,15 +24,15 @@ def plot_signal(simulated, real, plot_real=True, plot_clean=True, title=None):
     :return:
     """
     fig = plt.figure()
-    plt.plot(x, simulated)
     if plot_real:
-        plt.plot(x, real)
+        plt.plot(x, real, color='orange')
     if plot_clean:
-        plt.plot(x, clean_signal)
+        plt.plot(x, clean_signal, color='green')
     if title is not None:
         plt.title(title)
+    plt.plot(x, simulated, color='blue')
 
-    plt.savefig(f"{title.split(' ')[0]}.png")
+    plt.savefig(f"{title.split(' ')[0]}.jpg")
 
 
 def visualize(neurons, interval=(-5, 5), points=100,
@@ -84,4 +84,4 @@ def visualize(neurons, interval=(-5, 5), points=100,
     ax.set_ylabel('y')
     ax.set_zlabel('z')
 
-    plt.show()
+    plt.savefig(f"{title.split(' ')[0]}.jpg")
