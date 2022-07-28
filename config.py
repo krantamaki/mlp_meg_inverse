@@ -30,7 +30,7 @@ I_max = 1  # The maximum current possible in neurons (A)
 accuracy = 500  # Number of points calculate to a time period of one second
 v = 0.38  # The speed at which signal can be considered propagating  (m/s)
 length_coef = int(1 / (v / 500))  # Coefficient to calculate length constant lambda (l)
-margin_of_error = 0.25  # Hard to explain but unit is radians
+margin_of_error = 0.2  # Hard to explain but unit is radians
 num_points = 100  # Number of points that are evaluated in the squid sensors area
 z = 2  # Height at which the sensors are located
 r = 3  # Radius of the SQUID-sensors (cm)
@@ -43,7 +43,7 @@ signal_t_end = 1000  # Ending time point of the signal (milliseconds)
 
 x = np.linspace(signal_t_start, signal_t_end, int(accuracy * (signal_t_end - signal_t_start) / 1000))
 
-amplitude = 0.00002
+amplitude = 0.000015
 period = 1 / 100
 phase_shift = np.pi / (period * 2)
 clean_signal = amplitude * np.sin(period * (x + phase_shift)) + amplitude
