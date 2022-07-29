@@ -153,7 +153,7 @@ def optimize():
     cons = {'type': 'eq', 'fun': total_distance_to_surf}
     x0 = np.array(list(itertools.chain(*[neuron.coordinates for neuron in neurons])))
     x0 = x0.reshape(len(x0),)
-    sol = opt.minimize(corr, x0, method='SLSQP', constraints=cons, options={'ftol': 0.00001, 'maxiter': 25})
+    sol = opt.minimize(corr, x0, method='SLSQP', constraints=cons, options={'ftol': 0.00001, 'maxiter': 10})
 
     return sol
 
