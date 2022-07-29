@@ -1,3 +1,4 @@
 *.png
 testing.py
 __pycache__
+hello.sh
